@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Chatter</title>
+</head>
+<body>
+	<h1><center>Real-Time Messaging Application</center></h1>
+	<center>
+		<div>
+			<!-- <textarea name="" id="name" class="name" cols="10" rows="5" placeholder="Enter Your Name"></textarea> -->
+			<input type="text" id="name" class="name" placeholder="Enter Your Name" style="height: 30px;width: 260px;">
+
+		</div>
+	</center>
+
+		<div style="height: 250px;border: 1px solid grey;width: 260px;margin-left: 512px;overflow: auto;" class="chat-msg"></div>
+	<center>
+		<div><textarea name="" class="chat" cols="30" rows="5" placeholder="Type Your Message"></textarea></div>
+		
+	</center>
+	<div class="status" style="margin-left: 512px;">Status: <span>idle</span></div>
+	
+
+	<script src="http://127.0.0.1:8080/socket.io/socket.io.js"></script>
+	<script>
+		//console.log('1');
+		(function(){
+			//console.log('2');
+			var getNode = function(s){
+				return document.querySelector(s);
+			}
+
+			status = document.querySelector('.status span').textContent;
+
+			name = getNode('.name'),
+			messages = getNode('.chat-msg'),
+			chat = getNode('.chat');
+			
+			statusDefault = status,
+
+			setStatus = function(s){
+				document.querySelector('.status span').textContent = s;
+				//console.log(status);
+				if(s !== statusDefault){
+					var delay = setTimeout(function(){
+						setStatus(statusDefault);
+						clearInterval(delay);
+					},3000);
+				}
+			};
+			
+			//setStatus('Testing...');
+
+			try{
+				var socket = io.connect('http://127.0.0.1:8080');
+			}catch(e){
+				console.log(e);
+			}
+
+			if(socket !== undefined ){
+				console.log('Connection Established!');
+				
+				socket.on('status',function(data){
+					setStatus((typeof data === 'object') ? data.message : data);
+					console.log(data);
+					if(data.clear === true){
+						chat = '';
+					}
+				});
+
+				socket.on('output',function(data){
+					console.log(data);
+					if(data.length){
+						for(var x=0;x<data.length;x++){
+							var message = document.createElement('div');
+
+							message.setAttribute('class','chat-message');
+							message.setAttribute('style','padding: 10px 0px 5px 10px;');
+							message.textContent = data[x].name + ' : ' + data[x].message;
+
+							messages.appendChild(message);
+							messages.insertBefore(message,messages.firstChild);
+						}
+					}
+				});
+				
+				chat.addEventListener('keydown',function(event){										
+					var	username =  document.getElementById("name").value;
+					var self = this;
+					if(event.which == 13 && event.shiftKey == false){
+						socket.emit('input',{'name':username,'message':self.value});
+						event.preventDefault();
+					};
+					
+				})
+			}
+			else{
+				console.log('Please check the connection!');
+			}
+		})();
+	</script>
+</body>
+</html>
